@@ -6,8 +6,6 @@ A small web interface for VuFind's local configuration files. It is meant for
 librarians and developers who want to understand and tune a
 [VuFind®](https://vufind.org) installation without editing ini files by hand.
 
-[Deutsche Fassung](README.de.md)
-
 > **Status: beta.** This is an independent project, not part of VuFind and not
 > endorsed by the VuFind community. Test it on a non-production installation
 > first. Read [SECURITY.md](SECURITY.md) before running it anywhere but your
