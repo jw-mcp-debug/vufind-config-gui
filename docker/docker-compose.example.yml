@@ -1,0 +1,27 @@
+# Example: run the GUI next to an existing VuFind installation.
+#
+#   cp config/config.example.php config/config.php   # adjust paths/URLs
+#   docker compose -f docker/docker-compose.example.yml up -d
+#
+# Then open http://localhost:8181/
+#
+# The port is published on 127.0.0.1 ONLY. Do not change that without
+# reading SECURITY.md: the GUI can rewrite every VuFind setting.
+
+services:
+  vufind-config-gui:
+    image: php:8.3-cli
+    # Must be allowed to write VuFind's local directory (owner of local/)
+    user: "1000:1000"
+    command: php -S 0.0.0.0:8080 -t /app/public
+    environment:
+      VUFIND_CONFIG_GUI_CONFIG: /app/config/config.php
+    ports:
+      - "127.0.0.1:8181:8080"
+    volumes:
+      - ..:/app:ro
+      # Originals read-only, only local/ writable
+      - /usr/local/vufind:/usr/local/vufind:ro
+      - /usr/local/vufind/local:/usr/local/vufind/local
+    # If VuFind and Solr run in the same compose project, use their service
+    # names in config.php (e.g. 'solr' => 'http://solr:8983/solr/biblio').

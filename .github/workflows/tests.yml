@@ -1,0 +1,53 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, curl
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - name: PHP syntax
+        run: find src public tests -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+      - name: JavaScript syntax
+        run: for f in public/assets/*.js; do node --check "$f"; done
+      - run: vendor/bin/phpunit --testsuite unit
+
+  # Parser checks against every ini/properties file of real VuFind releases
+  vufind-config-files:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        vufind: ['v10.1.1', 'v11.1.0', 'dev']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: vufind-org/vufind
+          ref: ${{ matrix.vufind }}
+          path: vufind
+          sparse-checkout: |
+            config
+            import
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: vendor/bin/phpunit --testsuite integration
+        env:
+          VUFIND_HOME: ${{ github.workspace }}/vufind
