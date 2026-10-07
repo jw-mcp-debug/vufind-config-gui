@@ -13,6 +13,68 @@ librarians and developers who want to understand and tune a
 > first. Read [SECURITY.md](SECURITY.md) before running it anywhere but your
 > own machine.
 
+## Purpose
+
+VuFind is configured through about a hundred `.ini`, `.yaml` and `.properties`
+files with thousands of options. Most of them are documented only in comments
+inside the files. In practice it is hard to answer simple questions: Which
+options are set at all? What differs from the default? Which setting changes
+the order of my search results, and by how much?
+
+vufind-config-gui is meant to make these questions easy to answer:
+
+- **Understand:** every option with its help text, its default and whether it
+  is active. A diff shows all local changes, and a global search covers all
+  files.
+- **Change safely:** VuFind's originals are never touched, every save is backed
+  up, and files that PHP could not read are refused.
+- **See the effect before saving:** the ranking editor compares the current
+  and the edited relevance settings directly in Solr.
+- **Try out AI access:** the optional MCP module shows what an AI client
+  receives from VuFind's proposed MCP server.
+
+It grew out of a test lab built to learn how VuFind's settings affect search
+and display, and to evaluate the MCP server for a library catalogue.
+
+### Who it is for
+
+- system librarians and small teams who run or evaluate VuFind
+- workshops and teaching, where you want to show what a setting does
+- developers who need to switch settings quickly on a test installation
+
+## Scope
+
+**In scope**
+
+- VuFind's local configuration files in `config/vufind/` (`.ini`, plus raw
+  editing of `.yaml`) and `import/` (`.properties`)
+- one or a few VuFind installations on the same machine or Docker network
+- read-only queries to Solr for previews, field statistics and filter checks
+- one administrator at a time, on localhost or in a trusted network
+
+**Out of scope** (by design)
+
+- **No draft or staging mode.** A save is live in VuFind immediately (see
+  below). The only exception is the ranking preview, which tests unsaved
+  settings against Solr. Use a second instance as a test system.
+- **No user management.** There are no roles, no approval workflow and no audit
+  log beyond the backup copies.
+- **Nothing outside the configuration:** no themes or templates, no language
+  files, no Solr schema, no reindexing, no installation or updates of VuFind.
+- **No replacement for configuration management.** If you keep your local
+  directory in Git or deploy it with Ansible, keep doing so. The GUI only
+  edits files and works well alongside version control.
+- **Not for the public internet.** See [SECURITY.md](SECURITY.md).
+
+### Changes are live
+
+VuFind looks for every configuration file in its local directory first
+(`VUFIND_LOCAL_DIR/config/vufind/…`) and falls back to the original
+(`VUFIND_HOME/config/vufind/…`). On the first save the GUI copies the original
+into the local directory and changes only your lines there. From then on
+VuFind uses that copy. The GUI clears VuFind's caches, so the change is
+visible with the next page load. "Remove local copy" returns to the original.
+
 ## What it does
 
 - **Structured editing of `.ini` and `.properties` files.** Every option of

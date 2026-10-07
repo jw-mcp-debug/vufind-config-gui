@@ -12,6 +12,77 @@ wollen, ohne ini-Dateien von Hand zu bearbeiten.
 > ausprobieren und vor jedem Betrieb außerhalb des eigenen Rechners
 > [SECURITY.md](SECURITY.md) lesen.
 
+## Zweck
+
+VuFind wird über rund hundert `.ini`-, `.yaml`- und `.properties`-Dateien mit
+Tausenden von Optionen eingestellt. Die meisten sind nur in Kommentaren
+innerhalb der Dateien dokumentiert. Im Alltag sind deshalb einfache Fragen
+schwer zu beantworten: Welche Optionen sind überhaupt gesetzt? Was weicht vom
+Standard ab? Welche Einstellung verändert die Reihenfolge meiner Treffer, und
+wie stark?
+
+vufind-config-gui soll diese Fragen leicht beantwortbar machen:
+
+- **Verstehen:** jede Option mit Hilfetext, Standardwert und Status (aktiv oder
+  auskommentiert). Ein Diff zeigt alle lokalen Änderungen, eine globale Suche
+  durchsucht alle Dateien.
+- **Sicher ändern:** VuFinds Originale bleiben unberührt, jedes Speichern wird
+  gesichert, und Dateien, die PHP nicht lesen könnte, werden abgelehnt.
+- **Wirkung vor dem Speichern sehen:** Der Ranking-Editor vergleicht die
+  aktuelle und die bearbeitete Relevanzeinstellung direkt in Solr.
+- **KI-Zugriff ausprobieren:** Das optionale MCP-Modul zeigt, was ein KI-Client
+  vom geplanten MCP-Server von VuFind bekommt.
+
+Entstanden ist das Werkzeug in einem Testlabor. Dort sollte es zeigen, wie
+VuFinds Einstellungen Suche und Darstellung beeinflussen, und den MCP-Server
+für einen Bibliothekskatalog bewerten.
+
+### Für wen
+
+- Systembibliothekarinnen und -bibliothekare sowie kleine Teams, die VuFind
+  betreiben oder evaluieren
+- Workshops und Lehre, um zu zeigen, was eine Einstellung bewirkt
+- Entwicklerinnen und Entwickler, die an einer Testinstallation schnell
+  Einstellungen umschalten wollen
+
+## Abgrenzung
+
+**Dazu gehört**
+
+- VuFinds lokale Konfigurationsdateien in `config/vufind/` (`.ini`, dazu
+  `.yaml` im Rohtext) und `import/` (`.properties`)
+- eine oder wenige VuFind-Installationen auf demselben Rechner oder im selben
+  Docker-Netz
+- lesende Abfragen an Solr für Vorschau, Feldstatistik und Filterprüfung
+- jeweils eine Person in der Administration, auf localhost oder in einem
+  vertrauenswürdigen Netz
+
+**Bewusst nicht dabei**
+
+- **Kein Entwurfs- oder Testmodus.** Gespeichertes gilt sofort in VuFind
+  (siehe unten). Die einzige Ausnahme ist die Ranking-Vorschau, die
+  ungespeicherte Einstellungen gegen Solr testet. Als Testsystem eignet sich
+  eine zweite Instanz.
+- **Keine Benutzerverwaltung:** keine Rollen, keine Freigabeschritte und kein
+  Protokoll außer den Sicherungskopien.
+- **Nichts außerhalb der Konfiguration:** keine Themes oder Templates, keine
+  Sprachdateien, kein Solr-Schema, kein Neuindexieren, keine Installation oder
+  Aktualisierung von VuFind.
+- **Kein Ersatz für Konfigurationsverwaltung.** Wer das lokale Verzeichnis in
+  Git führt oder per Ansible verteilt, sollte das beibehalten. Die GUI
+  bearbeitet nur Dateien und verträgt sich gut mit Versionsverwaltung.
+- **Nicht für das öffentliche Internet,** siehe [SECURITY.md](SECURITY.md).
+
+### Änderungen wirken sofort
+
+VuFind sucht jede Konfigurationsdatei zuerst im lokalen Verzeichnis
+(`VUFIND_LOCAL_DIR/config/vufind/…`) und greift erst dann auf das Original
+(`VUFIND_HOME/config/vufind/…`) zurück. Beim ersten Speichern kopiert die GUI
+das Original ins lokale Verzeichnis und ändert dort nur Ihre Zeilen. Ab dann
+nutzt VuFind diese Kopie. Die GUI leert VuFinds Caches, deshalb ist die
+Änderung beim nächsten Seitenaufruf sichtbar. „Lokale Kopie entfernen“ führt
+zurück zum Original.
+
 ## Funktionen
 
 - **ini- und properties-Dateien strukturiert bearbeiten:** Alle Optionen der
