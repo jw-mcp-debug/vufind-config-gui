@@ -188,8 +188,36 @@ If an instance has an `mcp` entry, two more views appear:
   the raw answer and the JSON-RPC trace.
 
 This module follows the state of pull request #4939 and will need updates as
-the pull request changes. Last checked against commit `7ba7a62` (2026-10-15). The MCP SDK only accepts `localhost` hosts, so the
-GUI sends the host of `public_url` as `Host` header.
+the pull request changes. Last checked against commit `7ba7a62`
+(2026-10-15). The MCP SDK only accepts `localhost` hosts, so the GUI sends
+the host of `public_url` as `Host` header.
+
+### Second index (Search2)
+
+The pull request's search tools only search the main index. Records in a
+second index, for example journal articles connected as Search2, are invisible
+to an AI client. [`contrib/mcp-search2`](contrib/mcp-search2) contains a
+capability class for Search2, with a unit test and an example configuration.
+It is meant as a reference for the VuFind project and can be used on the pull
+request branch today.
+
+With two optional instance settings the editor supports it:
+
+```php
+'solr_search2' => 'http://localhost:8983/solr/articles',   // Solr core of Search2
+'mcp' => [
+    // ...
+    'search2_class' => 'VuFindApi\Mcp\Capabilities\SearchSearch2',
+],
+```
+
+- Each tool and resource shows which index it searches.
+- A button adds a search tool and a record resource for Search2. For a class
+  outside `VuFindApi\Mcp\Capabilities\`, the editor also adds its namespace to
+  `CapabilityNamespaces`.
+- Content types are shared by all tools. The check runs against the index of
+  the tools that use a content type, and a content type used by tools of
+  another index is marked.
 
 ## Tests
 

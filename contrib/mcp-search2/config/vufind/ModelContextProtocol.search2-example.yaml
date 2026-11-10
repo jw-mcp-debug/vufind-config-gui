@@ -1,0 +1,48 @@
+# Example: MCP tool and resource for the second Solr index (Search2).
+# Merge these sections into local/config/vufind/ModelContextProtocol.yaml.
+# Requires SearchSearch2.php (see ../../README.md).
+
+ResourceTemplates:
+  getSecondaryRecord:
+    title: Get Article by ID
+    description: Retrieve a single record from the article index by its id, as returned by searchArticles.
+    class: VuFindApi\Mcp\Capabilities\SearchSearch2
+    function: getRecord
+    # Use a scheme of its own: catalog:// ids are looked up in the main index.
+    uriTemplate: 'article://record/{recordId}'
+
+Tools:
+  searchArticles:
+    title: Search Articles
+    # Tell the model what is in this index and when to prefer the catalog tools,
+    # otherwise it may pick the wrong one. Add the words your users use.
+    description: >-
+      Search journal articles by keywords. This is a separate index from the
+      library catalog: use it for articles, and the catalog tools for books
+      and for journals as a whole.
+    class: VuFindApi\Mcp\Capabilities\SearchSearch2
+    function: searchRecords
+    inputSchema:
+      type: object
+      properties:
+        keywords:
+          type: string
+          description: Keywords to search for
+        contentType:
+          type: string
+          description: Optional, restrict to one part of the article index
+          enum:
+            - articles
+      required:
+        - keywords
+
+# ContentTypes are shared by all tools. Name the Search2 ones so they cannot be
+# mistaken for catalog types, and use fields that exist in the Search2 core.
+ContentTypes:
+  articles:
+    filter: (format:Article)
+
+# Only needed if you keep the class in your own namespace instead of
+# module/VuFindApi (see README):
+# CapabilityNamespaces:
+#   - MyLibrary\Mcp\Capabilities\

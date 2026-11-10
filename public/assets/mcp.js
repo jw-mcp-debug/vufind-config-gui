@@ -16,6 +16,36 @@ const clone = (o) => JSON.parse(JSON.stringify(o ?? null));
 const asObj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const parked = () => state.mcp?.parkedKey ?? 'GuiDisabled';
 
+// Second index (Search2): class from contrib/mcp-search2, or the one named in the instance config
+const SEARCH2_DEFAULT_CLASS = 'VuFindApi\\Mcp\\Capabilities\\SearchSearch2';
+const CORE_NAMESPACE = 'VuFindApi\\Mcp\\Capabilities\\';
+const search2Class = () => state.mcp?.search2Class ?? null;
+/** Index a capability class searches: 'Solr', 'Search2', or null for an unknown custom class */
+function backendOf(cls) {
+  if (!cls || cls === SOLR_CLASS) return 'Solr';
+  if (cls === SEARCH2_DEFAULT_CLASS || cls === search2Class()) return 'Search2';
+  return null;
+}
+const INDEX_LABELS = { Solr: 'mcp.index_solr', Search2: 'mcp.index_search2' };
+const indexLabel = (b) => t(INDEX_LABELS[b] ?? 'mcp.index_unknown');
+/** Indexes of the tools (active and parked, except one) whose contentType list contains a content type */
+function ctBackends(m, ct, except = null) {
+  const out = new Set();
+  for (const tool of [...Object.values(m.Tools), ...Object.values(m[parked()].Tools)]) {
+    if (tool === except) continue;
+    const b = backendOf(tool.class);
+    if (b && (tool.inputSchema?.properties?.contentType?.enum ?? []).includes(ct)) out.add(b);
+  }
+  return out;
+}
+/** A class outside the core namespace is only built if CapabilityNamespaces allows it */
+function allowNamespace(m, cls) {
+  if (!cls || cls.startsWith(CORE_NAMESPACE) || !cls.includes('\\')) return;
+  const ns = cls.slice(0, cls.lastIndexOf('\\') + 1);
+  m.CapabilityNamespaces = Array.isArray(m.CapabilityNamespaces) ? m.CapabilityNamespaces : [];
+  if (!m.CapabilityNamespaces.includes(ns)) m.CapabilityNamespaces.push(ns);
+}
+
 // ================================================================ Editor
 async function renderMcpEditor(panel) {
   panel.append(h('p', { class: 'empty' }, t('mcp.loading')));
@@ -72,7 +102,7 @@ async function renderMcpEditor(panel) {
       serverSection(m, markDirty, render),
       toolSection(m, markDirty, render),
       resourceSection(m, markDirty, render),
-      contentTypeSection(m, data.formats, markDirty, render),
+      contentTypeSection(m, { Solr: data.formats ?? [], Search2: data.formats2 ?? [] }, markDirty, render),
       fieldSection(m, data.fields, markDirty, render),
     );
   };
@@ -130,11 +160,23 @@ function toolSection(m, dirty, render) {
   const active = Object.entries(m.Tools).map(([n, tool]) => [n, tool, true]);
   const off = Object.entries(m[P].Tools).map(([n, tool]) => [n, tool, false]);
   const add = (preset) => {
-    let n = preset === 'ct' ? 'searchRecordsByContentType' : 'searchRecordsAnyType';
+    let n = { ct: 'searchRecordsByContentType', s2: 'searchSecondIndex' }[preset] ?? 'searchRecordsAnyType';
     for (let i = 2; m.Tools[n] || m[P].Tools[n]; i++) n = n.replace(/\d*$/, '') + i;
     // Tool texts are read by the model; VuFind's defaults are English
     const props = { keywords: { type: 'string', description: 'Keywords to search for' } };
     if (preset === 'ct') props.contentType = { type: 'string', description: 'A type of library content', enum: Object.keys(m.ContentTypes).slice(0, 1) };
+    if (preset === 's2') {
+      m.Tools[n] = {
+        title: 'Search Second Index',
+        // The model must know what is in this index, or it picks the wrong tool
+        description: 'Search records of the second index (for example journal articles) by keywords. Describe here what it contains and when to use it instead of the catalog tools.',
+        class: search2Class(), function: 'searchRecords',
+        inputSchema: { type: 'object', properties: props, required: ['keywords'] },
+      };
+      allowNamespace(m, search2Class());
+      dirty(); render();
+      return;
+    }
     m.Tools[n] = {
       title: preset === 'ct' ? 'Search Records by Content Type' : 'Search Records',
       description: preset === 'ct' ? 'Search library catalog records for a specific content type by keywords.' : 'Search library catalog records of all content types by keywords.',
@@ -147,7 +189,8 @@ function toolSection(m, dirty, render) {
     ...active.concat(off).map(([n, tool, on]) => toolCard(m, n, tool, on, dirty, render)),
     h('div', { class: 'mrow' },
       h('button', { class: 'ghost', onclick: () => add('any') }, '+ ' + t('mcp.add_search_tool')),
-      h('button', { class: 'ghost', onclick: () => add('ct') }, '+ ' + t('mcp.add_ct_tool'))));
+      h('button', { class: 'ghost', onclick: () => add('ct') }, '+ ' + t('mcp.add_ct_tool')),
+      search2Class() ? h('button', { class: 'ghost', onclick: () => add('s2') }, '+ ' + t('mcp.add_search2_tool')) : null));
 }
 
 /** Rename an entry (keeping the order) and/or move it into another object */
@@ -175,13 +218,18 @@ function toolCard(m, name, tool, on, dirty, render) {
       moveEntry(home, home, name, nn); dirty(); render();
     } });
 
+  const mine = backendOf(tool.class);
   const paramRows = Object.entries(props).map(([p, def]) => {
     const isCt = p === 'contentType';
-    const enumBox = isCt ? h('div', { class: 'chips' }, Object.keys(m.ContentTypes).map((ct) =>
-      h('label', { class: 'chip' }, h('input', { type: 'checkbox', checked: (def.enum ?? []).includes(ct), onchange: (e) => {
-        def.enum = Object.keys(m.ContentTypes).filter((k) => (k === ct ? e.target.checked : (def.enum ?? []).includes(k)));
-        dirty();
-      } }), ' ', ct)),
+    const enumBox = isCt ? h('div', { class: 'chips' }, Object.keys(m.ContentTypes).map((ct) => {
+      // Content types are shared by all tools; a filter written for another index finds nothing here
+      const others = mine ? [...ctBackends(m, ct, tool)].filter((b) => b !== mine) : [];
+      return h('label', { class: others.length ? 'chip warn' : 'chip', title: others.length ? t('mcp.ct_other_index', { index: others.map(indexLabel).join(', ') }) : '' },
+        h('input', { type: 'checkbox', checked: (def.enum ?? []).includes(ct), onchange: (e) => {
+          def.enum = Object.keys(m.ContentTypes).filter((k) => (k === ct ? e.target.checked : (def.enum ?? []).includes(k)));
+          dirty(); render();
+        } }), ' ', ct, others.length ? ' ⚠' : '');
+    }),
       Object.keys(m.ContentTypes).length ? null : h('small', {}, t('mcp.ct_first'))) : null;
     return h('div', { class: 'mparam' },
       h('div', { class: 'mrow' }, h('code', {}, p), h('span', { class: 'badge' }, def.type ?? 'string'),
@@ -205,7 +253,8 @@ function toolCard(m, name, tool, on, dirty, render) {
       field(t('mcp.title'), textInput(tool, 'title', dirty), t('mcp.title_hint')),
       field(t('mcp.implementation'), h('select', { onchange: (e) => { tool.function = e.target.value; tool.class ||= SOLR_CLASS; dirty(); render(); } },
         Object.entries(FUNCTIONS).filter(([, f]) => f.kind === 'tool').map(([k, f]) => h('option', { value: k, selected: tool.function === k }, t(f.label))),
-        fn ? null : h('option', { value: tool.function, selected: true }, t('mcp.custom_fn', { name: tool.function }))), h('code', { class: 'mclass' }, tool.class ?? ''))),
+        fn ? null : h('option', { value: tool.function, selected: true }, t('mcp.custom_fn', { name: tool.function }))),
+        h('span', {}, h('code', { class: 'mclass' }, tool.class ?? ''), ' ', h('span', { class: mine ? 'badge' : 'badge warn' }, t('mcp.index_badge', { index: indexLabel(mine) }))))),
     field(t('mcp.tool_description'), textArea(tool, 'description', dirty, 2)),
     h('div', { class: 'mparams' }, h('strong', {}, t('mcp.parameters')), ...paramRows,
       missing.length ? h('div', { class: 'mrow' }, missing.map((p) => h('button', { class: 'ghost small', onclick: () => {
@@ -228,6 +277,7 @@ function resourceSection(m, dirty, render) {
           h('input', { type: 'checkbox', class: 'switch', checked: on, 'aria-label': t('mcp.tool_active', { name: n }),
             onchange: (e) => { moveEntry(home, e.target.checked ? m.ResourceTemplates : m[P].ResourceTemplates, n, n); dirty(); render(); } }),
           h('code', { class: 'mname' }, n), h('code', {}, r.uriTemplate ?? ''),
+          h('span', { class: backendOf(r.class) ? 'badge' : 'badge warn' }, t('mcp.index_badge', { index: indexLabel(backendOf(r.class)) })),
           h('button', { class: 'link danger', onclick: () => { if (confirm(t('confirm.delete_tool', { name: n }))) { delete home[n]; dirty(); render(); } } }, t('action.delete'))),
         h('div', { class: 'mgrid' }, field(t('mcp.title'), textInput(r, 'title', dirty)), field(t('mcp.description'), textInput(r, 'description', dirty))));
     }),
@@ -235,23 +285,44 @@ function resourceSection(m, dirty, render) {
       m.ResourceTemplates.getRecord = { title: 'Get Record by ID', description: 'Retrieve a single record by its bibliographic id.',
         class: SOLR_CLASS, function: 'getRecord', uriTemplate: 'catalog://record/{recordId}' };
       dirty(); render();
-    } }, '+ ' + t('mcp.add_record_resource')));
+    } }, '+ ' + t('mcp.add_record_resource')),
+    // Record lookup in the second index needs its own resource: getRecord looks in one index only
+    search2Class() && !all.some(([, r]) => backendOf(r.class) === 'Search2') ? h('button', { class: 'ghost', onclick: () => {
+      let n = 'getSecondIndexRecord'; for (let i = 2; m.ResourceTemplates[n] || m[P].ResourceTemplates[n]; i++) n = 'getSecondIndexRecord' + i;
+      m.ResourceTemplates[n] = { title: 'Get Record from Second Index by ID', description: 'Retrieve a single record of the second index by its id, as returned by the search tool for that index.',
+        class: search2Class(), function: 'getRecord', uriTemplate: 'secondary://record/{recordId}' };
+      allowNamespace(m, search2Class());
+      dirty(); render();
+    } }, '+ ' + t('mcp.add_search2_resource')) : null);
 }
 
 // ---------------------------------------------------------------- Content types
-function contentTypeSection(m, formats, dirty, render) {
+function contentTypeSection(m, formatsBy, dirty, render) {
   const P = parked();
   const rows = Object.entries(m.ContentTypes).map(([k, def]) => {
+    // Check the filter in the index of the tools that use it (catalog if no tool uses it yet)
+    const used = [...ctBackends(m, k)];
+    const backends = used.length ? used : ['Solr'];
+    const formats = formatsBy[backends[0]] ?? [];
     const result = h('span', { class: 'mhint inline' });
     const input = h('input', { type: 'text', value: def.filter ?? '', spellcheck: 'false', class: 'mono', 'aria-label': t('mcp.filter_for', { type: k }),
       oninput: (e) => { def.filter = e.target.value; result.textContent = ''; dirty(); } });
     const test = async () => {
       result.textContent = '…';
-      try {
-        const r = await api('solrFilter', { body: { fq: input.value } });
-        result.textContent = r.error ? '⚠ ' + r.error.split('\n')[0] : t('solr.n_records', { n: fmtNumber(r.count) });
-        result.className = 'mhint inline ' + (r.error ? 'bad' : r.count ? 'good' : 'bad');
-      } catch (e) { result.textContent = e.message; }
+      const parts = [];
+      let ok = true;
+      for (const b of backends) {
+        // Name the index only when it is not the plain catalog case
+        const prefix = backends.length > 1 || b !== 'Solr' ? indexLabel(b) + ': ' : '';
+        if (b === 'Search2' && !state.mcp?.hasSearch2Solr) { parts.push(prefix + t('mcp.no_search2_solr')); ok = false; continue; }
+        try {
+          const r = await api('solrFilter', { body: { fq: input.value, backend: b } });
+          parts.push(prefix + (r.error ? '⚠ ' + r.error.split('\n')[0] : t('solr.n_records', { n: fmtNumber(r.count) })));
+          ok &&= !r.error && r.count > 0;
+        } catch (e) { parts.push(prefix + e.message); ok = false; }
+      }
+      result.textContent = parts.join(' · ');
+      result.className = 'mhint inline ' + (ok ? 'good' : 'bad');
     };
     const addFormat = h('select', { 'aria-label': t('mcp.insert_format'), onchange: (e) => {
       if (!e.target.value) return;
@@ -282,9 +353,11 @@ function contentTypeSection(m, formats, dirty, render) {
         dirty(); render();
       } }, t('action.delete')));
   });
+  const formatChips = (list, label) => (list.length ? h('div', { class: 'chips' }, h('span', { class: 'mhint inline' }, label + ' '),
+    list.map((f) => h('span', { class: 'badge' }, `${f.value} ${f.count}`))) : null);
   return card(t('mcp.content_types'), t('mcp.content_types_hint'),
-    formats.length ? h('div', { class: 'chips' }, h('span', { class: 'mhint inline' }, t('mcp.formats_in_index') + ' '),
-      formats.map((f) => h('span', { class: 'badge' }, `${f.value} ${f.count}`))) : null,
+    formatChips(formatsBy.Solr, t('mcp.formats_in_index')),
+    formatChips(formatsBy.Search2, t('mcp.formats_in_index2')),
     ...rows,
     h('button', { class: 'ghost', onclick: () => {
       let k = 'newType'; for (let i = 2; m.ContentTypes[k]; i++) k = 'newType' + i;

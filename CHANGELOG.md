@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- MCP module follows pull request #4939 at commit `7ba7a62`: the removed
+  `versionSuffix` setting is no longer offered.
+- New `contrib/mcp-search2`: MCP search capability for VuFind's second index
+  (Search2), with unit test and example configuration, as a reference for the
+  VuFind project. CI runs the test and VuFind's code checks against the pull
+  request branch.
+- MCP editor: shows which index each tool and resource searches, adds Search2
+  tools and resources (including `CapabilityNamespaces`), checks content types
+  against the index of the tools that use them and marks content types shared
+  across indexes. New optional instance settings `solr_search2` and
+  `mcp.search2_class`.
+
 ## 0.1.0 – 2026-10-07
 
 First public version, extracted from a VuFind test lab.

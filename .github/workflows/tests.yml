@@ -51,3 +51,37 @@ jobs:
       - run: vendor/bin/phpunit --testsuite integration
         env:
           VUFIND_HOME: ${{ github.workspace }}/vufind
+
+  # contrib/mcp-search2 inside VuFind: the MCP pull request branch (vufind-org/vufind#4939),
+  # pinned to the commit the class was checked against. Update the ref after re-checking.
+  mcp-search2:
+    runs-on: ubuntu-latest
+    env:
+      FILES: >-
+        module/VuFindApi/src/VuFindApi/Mcp/Capabilities/SearchSearch2.php
+        module/VuFindApi/tests/unit-tests/src/VuFindTest/Mcp/Capabilities/SearchSearch2Test.php
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: maccabeelevine/vufind
+          ref: 7ba7a62b074189605e5fe270957ffdfe9351ea54
+          path: vufind
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Install VuFind with development dependencies
+        working-directory: vufind
+        run: composer install --no-interaction --no-progress --no-scripts --ignore-platform-reqs
+      - name: Copy the contrib files into VuFind
+        run: cp -r contrib/mcp-search2/module/. vufind/module/
+      - name: Unit test
+        working-directory: vufind
+        run: vendor/bin/phpunit -c module/VuFind/tests/phpunit.xml module/VuFindApi/tests/unit-tests/src/VuFindTest/Mcp/Capabilities/SearchSearch2Test.php
+      - name: VuFind code style and static analysis
+        working-directory: vufind
+        run: |
+          vendor/bin/phpcs --standard=tests/phpcs.xml $FILES
+          vendor/bin/php-cs-fixer fix --config=tests/vufind.php-cs-fixer.php --dry-run --diff $FILES
+          vendor/bin/phpstan analyse --no-progress -c tests/phpstan.neon $FILES

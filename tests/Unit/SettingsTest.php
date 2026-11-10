@@ -25,6 +25,20 @@ final class SettingsTest extends TestCase
         $this->assertSame('GuiDisabled', $s->instance('b')->mcp['parked_key']);
         $this->assertSame('http://x/mcp', $s->instance('b')->mcp['public_url']);
         $this->assertNull($s->instance('a')->mcp);
+        $this->assertNull($s->instance('b')->mcp['search2_class']);
+        $this->assertNull($s->instance('b')->solrSearch2);
+    }
+
+    public function testSecondIndexSettings(): void
+    {
+        $s = Settings::fromArray(['instances' => ['a' => [
+            'home' => '/a',
+            'solr_search2' => 'http://solr:8983/solr/articles/',
+            'mcp' => ['endpoint' => 'http://x/mcp', 'search2_class' => '\\MyLib\\Mcp\\SearchSearch2'],
+        ]]]);
+        $this->assertSame('http://solr:8983/solr/articles', $s->instance('a')->solrSearch2);
+        // Leading backslash removed: the GUI compares it with the class in the YAML file
+        $this->assertSame('MyLib\\Mcp\\SearchSearch2', $s->instance('a')->mcp['search2_class']);
     }
 
     public function testRejectsBadInstanceKey(): void

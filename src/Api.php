@@ -15,6 +15,8 @@ final class Api
 {
     private readonly FileStore $files;
     private readonly Solr $solr;
+    /** Second index (Search2), only used by the MCP editor */
+    private readonly Solr $solr2;
 
     public function __construct(
         private readonly Settings $settings,
@@ -23,6 +25,7 @@ final class Api
     ) {
         $this->files = new FileStore($inst);
         $this->solr = new Solr($inst->solr);
+        $this->solr2 = new Solr($inst->solrSearch2);
     }
 
     public function handle(string $action, array $query, array $body): array
@@ -49,7 +52,8 @@ final class Api
             'instance' => $this->inst->key,
             'instances' => $instances,
             'hasSolr' => $this->solr->available(),
-            'mcp' => $this->inst->mcp ? ['publicUrl' => $this->inst->mcp['public_url'], 'parkedKey' => $this->inst->mcp['parked_key']] : null,
+            'mcp' => $this->inst->mcp ? ['publicUrl' => $this->inst->mcp['public_url'], 'parkedKey' => $this->inst->mcp['parked_key'],
+                'search2Class' => $this->inst->mcp['search2_class'], 'hasSearch2Solr' => $this->solr2->available()] : null,
             'problems' => array_map(fn ($p) => $this->i18n->t($p[0], $p[1]), $this->inst->problems()),
         ];
     }
@@ -183,9 +187,17 @@ final class Api
 
     // ------------------------------------------------------------ Solr / ranking
 
+    /** Count for a filter query; body.backend "Search2" checks the second index (MCP content types) */
     private function actionSolrFilter(array $query, array $body): array
     {
-        return $this->solr->filterCount((string)($body['fq'] ?? ''));
+        $fq = (string)($body['fq'] ?? '');
+        if (($body['backend'] ?? 'Solr') === 'Search2') {
+            if (!$this->solr2->available()) {
+                throw new HttpException('error.no_search2_solr');
+            }
+            return $this->solr2->filterCount($fq);
+        }
+        return $this->solr->filterCount($fq);
     }
 
     private function actionSpecModel(): array
@@ -256,6 +268,7 @@ final class Api
         $mcp = $this->mcpConfig();
         return ['model' => $mcp->load(), 'fields' => $mcp->availableFields(),
             'formats' => $this->solr->available() ? $this->solr->formats() : [],
+            'formats2' => $this->solr2->available() ? $this->solr2->formats() : [],
             'info' => $this->files->info(McpConfig::FILE), 'mtime' => $this->files->mtime(McpConfig::FILE)];
     }
 

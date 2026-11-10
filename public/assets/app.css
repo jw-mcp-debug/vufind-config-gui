@@ -172,6 +172,7 @@ input.mname { width: 260px; max-width: 100%; }
 .mparam { background: var(--surface-2); border-radius: 6px; padding: 6px 10px; margin: 6px 0; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 4px 0 8px; }
 .chip { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 2px 10px; font-size: 12.5px; }
+.chip.warn { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
 .mct { display: grid; grid-template-columns: 160px minmax(200px, 1fr) auto auto minmax(80px, auto) auto; gap: 8px; align-items: center; margin: 6px 0; }
 .mct .mname { width: 100%; }
 .mfields { margin: 0 0 10px; padding-left: 22px; }

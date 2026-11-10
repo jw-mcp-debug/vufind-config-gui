@@ -63,7 +63,14 @@ return [
         //         'public_url' => 'http://localhost:8080/vufind/api/v1/mcp',
         //         // Key under which the GUI parks disabled tools (ignored by VuFind)
         //         'parked_key' => 'GuiDisabled',
+        //         // Optional: capability class that searches the second index (Search2),
+        //         // see contrib/mcp-search2. Enables a button for a Search2 tool and shows
+        //         // which index each tool searches.
+        //         // 'search2_class' => 'VuFindApi\Mcp\Capabilities\SearchSearch2',
         //     ],
+        //     // Optional: Solr core of the second index (Search2) as seen from the GUI,
+        //     // for checking content types of Search2 tools
+        //     // 'solr_search2' => 'http://localhost:8983/solr/articles',
         // ],
     ],
 ];

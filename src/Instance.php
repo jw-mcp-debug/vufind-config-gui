@@ -14,7 +14,8 @@ final class Instance
 {
     /**
      * @param string[]                                                      $protectedFiles relative paths whose local copy must not be removed
-     * @param array{endpoint: string, public_url: string, parked_key: string}|null $mcp
+     * @param array{endpoint: string, public_url: string, parked_key: string, search2_class: ?string}|null $mcp
+     * @param ?string                                                       $solrSearch2    Solr core of the second index (Search2), for filter checks
      */
     public function __construct(
         public readonly string $key,
@@ -26,6 +27,7 @@ final class Instance
         public readonly string $backupDir,
         public readonly array $protectedFiles,
         public readonly ?array $mcp,
+        public readonly ?string $solrSearch2 = null,
     ) {
     }
 
@@ -47,6 +49,9 @@ final class Instance
                 // URL a client outside the GUI would use; its host is sent as Host header
                 'public_url' => (string)($c['mcp']['public_url'] ?? $c['mcp']['endpoint']),
                 'parked_key' => (string)($c['mcp']['parked_key'] ?? 'GuiDisabled'),
+                // Optional capability class that searches Search2 (contrib/mcp-search2)
+                'search2_class' => isset($c['mcp']['search2_class']) && $c['mcp']['search2_class'] !== ''
+                    ? ltrim((string)$c['mcp']['search2_class'], '\\') : null,
             ];
         }
         return new self(
@@ -59,6 +64,7 @@ final class Instance
             backupDir: rtrim((string)($c['backup_dir'] ?? $local . '/gui-backups'), '/'),
             protectedFiles: array_values((array)($c['protected_files'] ?? ['config/vufind/config.ini'])),
             mcp: $mcp,
+            solrSearch2: isset($c['solr_search2']) && $c['solr_search2'] !== '' ? rtrim((string)$c['solr_search2'], '/') : null,
         );
     }
 
