@@ -184,8 +184,6 @@
   "mcp.transport": "Transport „Streamable HTTP“",
   "mcp.name": "Name",
   "mcp.name_hint": "serverInfo.name – erscheint im Client",
-  "mcp.version_suffix": "Versionszusatz",
-  "mcp.version_suffix_hint": "wird an die VuFind-Version angehängt",
   "mcp.description": "Beschreibung",
   "mcp.description_hint": "Standard: Titel der Website aus config.ini. Kann dem Modell helfen, den Server einzuordnen.",
   "mcp.tools": "Tools",

@@ -188,7 +188,7 @@ If an instance has an `mcp` entry, two more views appear:
   the raw answer and the JSON-RPC trace.
 
 This module follows the state of pull request #4939 and will need updates as
-the pull request changes. The MCP SDK only accepts `localhost` hosts, so the
+the pull request changes. Last checked against commit `7ba7a62` (2026-10-15). The MCP SDK only accepts `localhost` hosts, so the
 GUI sends the host of `public_url` as `Host` header.
 
 ## Tests

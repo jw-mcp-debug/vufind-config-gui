@@ -120,8 +120,7 @@ function serverSection(m, dirty) {
     h('div', { class: 'mrow' }, enabled, h('strong', {}, t('mcp.server_enabled')),
       h('span', { class: 'mhint inline' }, t('mcp.endpoint') + ' ', h('code', {}, state.mcp.publicUrl), ' · ' + t('mcp.transport'))),
     h('div', { class: 'mgrid' },
-      field(t('mcp.name'), textInput(g, 'name', dirty, { placeholder: 'VuFind® Server' }), t('mcp.name_hint')),
-      field(t('mcp.version_suffix'), textInput(g, 'versionSuffix', dirty, { placeholder: '-a' }), t('mcp.version_suffix_hint'))),
+      field(t('mcp.name'), textInput(g, 'name', dirty, { placeholder: 'VuFind® Server' }), t('mcp.name_hint'))),
     field(t('mcp.description'), textArea(g, 'description', dirty), t('mcp.description_hint')));
 }
 

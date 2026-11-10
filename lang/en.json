@@ -184,8 +184,6 @@
   "mcp.transport": "transport “Streamable HTTP”",
   "mcp.name": "Name",
   "mcp.name_hint": "serverInfo.name – shown in the client",
-  "mcp.version_suffix": "Version suffix",
-  "mcp.version_suffix_hint": "appended to the VuFind version",
   "mcp.description": "Description",
   "mcp.description_hint": "Default: site title from config.ini. Can help the model to place the server.",
   "mcp.tools": "Tools",
