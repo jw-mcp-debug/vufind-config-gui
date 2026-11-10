@@ -13,6 +13,9 @@
   against the index of the tools that use them and marks content types shared
   across indexes. New optional instance settings `solr_search2` and
   `mcp.search2_class`.
+- Tools and resources from `contrib/mcp-search2` are marked as an add-on in the
+  MCP editor and the MCP test. The MCP test offers “not set” for optional
+  enum parameters such as `contentType`.
 
 ## 0.1.0 – 2026-10-07
 

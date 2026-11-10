@@ -45,6 +45,9 @@ function allowNamespace(m, cls) {
   m.CapabilityNamespaces = Array.isArray(m.CapabilityNamespaces) ? m.CapabilityNamespaces : [];
   if (!m.CapabilityNamespaces.includes(ns)) m.CapabilityNamespaces.push(ns);
 }
+/** Marks capabilities that are not part of the pull request: the Search2 search from contrib/mcp-search2 */
+const addonBadge = (cls) => (backendOf(cls) === 'Search2'
+  ? h('span', { class: 'badge addon', title: t('mcp.addon_title') }, t('mcp.addon_badge')) : null);
 
 // ================================================================ Editor
 async function renderMcpEditor(panel) {
@@ -254,7 +257,8 @@ function toolCard(m, name, tool, on, dirty, render) {
       field(t('mcp.implementation'), h('select', { onchange: (e) => { tool.function = e.target.value; tool.class ||= SOLR_CLASS; dirty(); render(); } },
         Object.entries(FUNCTIONS).filter(([, f]) => f.kind === 'tool').map(([k, f]) => h('option', { value: k, selected: tool.function === k }, t(f.label))),
         fn ? null : h('option', { value: tool.function, selected: true }, t('mcp.custom_fn', { name: tool.function }))),
-        h('span', {}, h('code', { class: 'mclass' }, tool.class ?? ''), ' ', h('span', { class: mine ? 'badge' : 'badge warn' }, t('mcp.index_badge', { index: indexLabel(mine) }))))),
+        h('span', {}, h('code', { class: 'mclass' }, tool.class ?? ''), ' ', h('span', { class: mine ? 'badge' : 'badge warn' }, t('mcp.index_badge', { index: indexLabel(mine) })),
+          ' ', addonBadge(tool.class)))),
     field(t('mcp.tool_description'), textArea(tool, 'description', dirty, 2)),
     h('div', { class: 'mparams' }, h('strong', {}, t('mcp.parameters')), ...paramRows,
       missing.length ? h('div', { class: 'mrow' }, missing.map((p) => h('button', { class: 'ghost small', onclick: () => {
@@ -278,6 +282,7 @@ function resourceSection(m, dirty, render) {
             onchange: (e) => { moveEntry(home, e.target.checked ? m.ResourceTemplates : m[P].ResourceTemplates, n, n); dirty(); render(); } }),
           h('code', { class: 'mname' }, n), h('code', {}, r.uriTemplate ?? ''),
           h('span', { class: backendOf(r.class) ? 'badge' : 'badge warn' }, t('mcp.index_badge', { index: indexLabel(backendOf(r.class)) })),
+          addonBadge(r.class),
           h('button', { class: 'link danger', onclick: () => { if (confirm(t('confirm.delete_tool', { name: n }))) { delete home[n]; dirty(); render(); } } }, t('action.delete'))),
         h('div', { class: 'mgrid' }, field(t('mcp.title'), textInput(r, 'title', dirty)), field(t('mcp.description'), textInput(r, 'description', dirty))));
     }),
@@ -423,20 +428,28 @@ async function renderMcpTest(main) {
       h('dt', {}, t('mcptest.protocol')), h('dd', {}, list.server.protocolVersion ?? '–'),
       h('dt', {}, t('mcptest.capabilities')), h('dd', {}, Object.keys(list.server.capabilities ?? {}).join(', '))));
 
+  // The server does not say which class implements a tool; the configuration does
+  const model = (await api('mcpModel').catch(() => null))?.model ?? {};
+  const toolClass = (name) => model.Tools?.[name]?.class;
+  const resourceClass = (uri) => Object.values(model.ResourceTemplates ?? {}).find((r) => r.uriTemplate === uri)?.class;
+
   const toolList = list.response?.result?.tools ?? [];
   tools.append(h('section', { class: 'mcard' }, h('h3', {}, t('mcptest.tools_n', { n: toolList.length })),
     toolList.length ? null : h('p', { class: 'empty' }, t('mcptest.no_tools')),
-    ...toolList.map((tool) => toolRunner(tool, showTrace)),
+    ...toolList.map((tool) => toolRunner(tool, showTrace, toolClass(tool.name))),
     h('details', {}, h('summary', { class: 'mhint' }, t('mcptest.tools_raw')),
       h('pre', { class: 'json' }, JSON.stringify(toolList, null, 2)))));
 
   const tpl = await api('mcpRpc', { body: { method: 'resources/templates/list' } }).catch(() => null);
   const templates = tpl?.response?.result?.resourceTemplates ?? [];
   if (templates.length) resources.append(h('section', { class: 'mcard' }, h('h3', {}, t('mcptest.resources_n', { n: templates.length })),
-    ...templates.map((r) => resourceRunner(r, showTrace))));
+    ...templates.map((r) => resourceRunner(r, showTrace, resourceClass(r.uriTemplate)))));
 }
 
-function toolRunner(tool, showTrace) {
+/** Index and add-on badges for the MCP test; nothing if the class is unknown (e.g. auto-discovered) */
+const testBadges = (cls) => (cls ? [h('span', { class: 'badge' }, t('mcp.index_badge', { index: indexLabel(backendOf(cls)) })), addonBadge(cls)] : []);
+
+function toolRunner(tool, showTrace, cls) {
   const props = tool.inputSchema?.properties ?? {};
   const required = tool.inputSchema?.required ?? [];
   const inputs = {};
@@ -453,25 +466,26 @@ function toolRunner(tool, showTrace) {
     } catch (err) { out.replaceChildren(h('p', { class: 'note warn' }, err.message)); }
   } },
   Object.entries(props).map(([k, def]) => {
+    // An optional enum gets an empty choice, so the call can leave it out
     const el = def.enum
-      ? h('select', {}, def.enum.map((v) => h('option', { value: v }, v)))
+      ? h('select', {}, required.includes(k) ? null : h('option', { value: '' }, t('mcptest.not_set')), def.enum.map((v) => h('option', { value: v }, v)))
       : h('input', { type: 'text', placeholder: def.description ?? k, required: required.includes(k) });
     inputs[k] = el;
     return h('label', { class: 'mfield' }, h('span', {}, k + (required.includes(k) ? ' *' : '')), el, def.description ? h('small', {}, def.description) : null);
   }),
   h('button', { class: 'primary', type: 'submit' }, t('mcptest.call')));
   return h('div', { class: 'mitem' },
-    h('div', { class: 'mrow' }, h('code', { class: 'mname' }, tool.name), tool.title ? h('strong', {}, tool.title) : null),
+    h('div', { class: 'mrow' }, h('code', { class: 'mname' }, tool.name), tool.title ? h('strong', {}, tool.title) : null, ...testBadges(cls)),
     tool.description ? h('p', { class: 'mhint' }, tool.description) : null,
     form, out);
 }
 
-function resourceRunner(r, showTrace) {
+function resourceRunner(r, showTrace, cls) {
   const vars = [...(r.uriTemplate.matchAll(/\{(\w+)\}/g))].map((x) => x[1]);
   const inputs = Object.fromEntries(vars.map((v) => [v, h('input', { type: 'text', placeholder: v, required: true })]));
   const out = h('div', { class: 'mresult' });
   return h('div', { class: 'mitem' },
-    h('div', { class: 'mrow' }, h('code', { class: 'mname' }, r.uriTemplate), r.title ? h('strong', {}, r.title) : null),
+    h('div', { class: 'mrow' }, h('code', { class: 'mname' }, r.uriTemplate), r.title ? h('strong', {}, r.title) : null, ...testBadges(cls)),
     r.description ? h('p', { class: 'mhint' }, r.description) : null,
     h('form', { class: 'mform', onsubmit: async (e) => {
       e.preventDefault();

@@ -31,6 +31,15 @@ vufind-config-gui is meant to make these questions easy to answer:
 - **Try out AI access:** the optional MCP module shows what an AI client
   receives from VuFind's proposed MCP server.
 
+> **Our addition to the MCP server: article search.** The MCP server proposed
+> in [vufind-org/vufind#4939](https://github.com/vufind-org/vufind/pull/4939)
+> only searches the main catalog index, so journal articles kept in a second
+> index (Search2) are invisible to an AI client. This repository adds a search
+> capability for that index in
+> [`contrib/mcp-search2`](contrib/mcp-search2), with a test and an example
+> configuration, as a proposal for VuFind. It is **not part of the pull
+> request**; the GUI marks tools that use it as an add-on.
+
 It grew out of a test lab built to learn how VuFind's settings affect search
 and display, and to evaluate the MCP server for a library catalogue.
 
@@ -192,7 +201,7 @@ the pull request changes. Last checked against commit `7ba7a62`
 (2026-10-15). The MCP SDK only accepts `localhost` hosts, so the GUI sends
 the host of `public_url` as `Host` header.
 
-### Second index (Search2)
+### Second index (Search2) – our addition, not in the pull request
 
 The pull request's search tools only search the main index. Records in a
 second index, for example journal articles connected as Search2, are invisible
@@ -211,7 +220,10 @@ With two optional instance settings the editor supports it:
 ],
 ```
 
-- Each tool and resource shows which index it searches.
+- Each tool and resource shows which index it searches. Tools and resources
+  that use the Search2 class carry the badge **Add-on: contrib/mcp-search2**,
+  in the editor and in the MCP test, so it stays clear what comes from the pull
+  request and what from this repository.
 - A button adds a search tool and a record resource for Search2. For a class
   outside `VuFindApi\Mcp\Capabilities\`, the editor also adds its namespace to
   `CapabilityNamespaces`.
