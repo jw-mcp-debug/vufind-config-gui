@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Gear menu in the header with the appearance (system, light, dark) and the
+  language. The choice is stored in a cookie and applied by the server, so the
+  page does not flash in the wrong colours.
+- The test search field is now called “Test search in catalogue” so it is not
+  confused with the settings search next to it.
 - MCP module follows pull request #4939 at commit `7ba7a62`: the removed
   `versionSuffix` setting is no longer offered.
 - New `contrib/mcp-search2`: MCP search capability for VuFind's second index

@@ -2,16 +2,26 @@
   --bg: #f6f7f9; --surface: #fff; --surface-2: #f0f2f5; --border: #dde1e7;
   --text: #1c2330; --muted: #5c6675; --accent: #2458c6; --accent-soft: #e6eefc;
   --ok: #1d7a45; --ok-soft: #e3f4ea; --warn: #9a5b00; --warn-soft: #fff3dc;
-  --danger: #b3261e; --danger-soft: #fde8e6;
+  --danger: #b3261e; --danger-soft: #fde8e6; --on-accent: #fff;
   --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   color-scheme: light;
 }
+/* Dark colours apply when chosen in the gear menu (data-theme="dark") or when the
+   system is dark and nothing else was chosen. The block is repeated because a
+   media query and an attribute selector cannot be combined into one rule. */
+:root[data-theme="dark"] {
+  --bg: #14171c; --surface: #1c2027; --surface-2: #242933; --border: #333a46;
+  --text: #e4e8ee; --muted: #9aa4b2; --accent: #7aa7ff; --accent-soft: #22324f;
+  --ok: #6fd39a; --ok-soft: #1c3527; --warn: #f0b75a; --warn-soft: #3a2d15;
+  --danger: #ff8a80; --danger-soft: #3d1f1d; --on-accent: #0d1526;
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #14171c; --surface: #1c2027; --surface-2: #242933; --border: #333a46;
     --text: #e4e8ee; --muted: #9aa4b2; --accent: #7aa7ff; --accent-soft: #22324f;
     --ok: #6fd39a; --ok-soft: #1c3527; --warn: #f0b75a; --warn-soft: #3a2d15;
-    --danger: #ff8a80; --danger-soft: #3d1f1d;
+    --danger: #ff8a80; --danger-soft: #3d1f1d; --on-accent: #0d1526;
     color-scheme: dark;
   }
 }
@@ -108,10 +118,8 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 .ghost { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; color: var(--text); white-space: nowrap; }
 .ghost:hover { background: var(--surface-2); }
 .ghost.danger { color: var(--danger); }
-.primary { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 6px 16px; font-weight: 600; }
-@media (prefers-color-scheme: dark) { .primary { color: #0d1526; } }
-.testsearch button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 5px 12px; white-space: nowrap; }
-@media (prefers-color-scheme: dark) { .testsearch button { color: #0d1526; } }
+.primary { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 6px 16px; font-weight: 600; }
+.testsearch button { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 6px; padding: 5px 12px; white-space: nowrap; }
 
 .savebar { position: fixed; bottom: 16px; right: 24px; left: 304px; display: flex; gap: 10px; align-items: center; justify-content: flex-end; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; box-shadow: 0 6px 24px rgba(0,0,0,.12); }
 .savebar[hidden] { display: none; }
@@ -145,7 +153,19 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 
 /* ---------------------------------------------------------------- Instanz & MCP */
 .instance { font-weight: 600; }
-.lang { flex: none; }
+
+/* ---------------------------------------------------------------- Settings menu (gear) */
+.settings { position: relative; flex: none; }
+.ghost.icon { display: inline-flex; align-items: center; justify-content: center; padding: 5px 7px; color: var(--muted); }
+.ghost.icon:hover, .ghost.icon[aria-expanded="true"] { color: var(--text); }
+.settingsmenu { position: absolute; top: calc(100% + 6px); right: 0; min-width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.22); padding: 10px 12px; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
+.settingsmenu.left { right: auto; left: 0; }
+.themepick { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.themepick legend, .langpick > span { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 0; margin-bottom: 4px; }
+.themepick label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.themepick input { accent-color: var(--accent); margin: 0; }
+.langpick { display: flex; flex-direction: column; }
+.lang { width: 100%; }
 .link.danger { color: var(--danger); }
 .ghost.small { padding: 3px 9px; font-size: 12px; }
 .mono { font-family: var(--mono); font-size: 12.5px; }

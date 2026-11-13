@@ -452,6 +452,36 @@ $('#lang').addEventListener('change', (e) => {
   location.reload();
 });
 
+// ------------------------------------------------------------ Settings menu (gear)
+const settingsBtn = $('#settingsbtn');
+const settingsMenu = $('#settingsmenu');
+const setMenuOpen = (open) => {
+  settingsMenu.hidden = !open;
+  settingsBtn.setAttribute('aria-expanded', String(open));
+  // On narrow screens the header wraps and the gear can land at the left edge
+  if (open) settingsMenu.classList.toggle('left', settingsBtn.getBoundingClientRect().right < settingsMenu.offsetWidth);
+};
+settingsBtn.addEventListener('click', () => setMenuOpen(settingsMenu.hidden));
+document.addEventListener('click', (e) => {
+  if (!settingsMenu.hidden && !e.target.closest('.settings')) setMenuOpen(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !settingsMenu.hidden) { setMenuOpen(false); settingsBtn.focus(); }
+});
+
+// The server sets data-theme from the cookie before the first paint; here it changes without a reload
+settingsMenu.addEventListener('change', (e) => {
+  if (e.target.name !== 'theme') return;
+  const theme = e.target.value;
+  if (theme === 'auto') {
+    delete document.documentElement.dataset.theme;
+    document.cookie = 'vcg_theme=; path=/; max-age=0; SameSite=Strict';
+  } else {
+    document.documentElement.dataset.theme = theme;
+    document.cookie = `vcg_theme=${theme}; path=/; max-age=31536000; SameSite=Strict`;
+  }
+});
+
 window.addEventListener('beforeunload', (e) => { if (state.dirty.size || state.mcpDirty || state.specDirty) { e.preventDefault(); e.returnValue = ''; } });
 
 // Start: hash "#<instance>:<file>" or "#<instance>:@mcptest"

@@ -14,6 +14,7 @@ use VuFindConfigGui\HttpException;
 use VuFindConfigGui\I18n;
 use VuFindConfigGui\Security;
 use VuFindConfigGui\Settings;
+use VuFindConfigGui\Theme;
 
 require dirname(__DIR__) . '/src/autoload.php';
 
@@ -79,9 +80,10 @@ $h = static fn (string $s) => htmlspecialchars($s, ENT_QUOTES);
 $t = static fn (string $key) => $h($i18n->t($key));
 $langData = json_encode(['lang' => $lang, 'strings' => $i18n->all(), 'languages' => I18n::LANGUAGES],
     JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+$theme = Theme::fromCookie($_COOKIE[Theme::COOKIE] ?? null);
 $v = static fn (string $file) => $h($file) . '?v=' . (@filemtime(__DIR__ . '/assets/' . $file) ?: 0);
 ?><!doctype html>
-<html lang="<?= $h($lang) ?>">
+<html lang="<?= $h($lang) ?>"<?= $theme !== Theme::AUTO ? ' data-theme="' . $h($theme) . '"' : '' ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -107,11 +109,26 @@ $v = static fn (string $file) => $h($file) . '?v=' . (@filemtime(__DIR__ . '/ass
     <div id="gresults" class="gresults" hidden></div>
   </div>
   <button id="clearcache" class="ghost" title="<?= $t('header.clearcache_title') ?>"><?= $t('header.clearcache') ?></button>
-  <select id="lang" class="lang" aria-label="<?= $t('header.language') ?>">
-<?php foreach (I18n::LANGUAGES as $code => $name): ?>
-    <option value="<?= $h($code) ?>"<?= $code === $lang ? ' selected' : '' ?>><?= $h($name) ?></option>
+  <div class="settings">
+    <button id="settingsbtn" class="ghost icon" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="settingsmenu" title="<?= $t('prefs.title') ?>" aria-label="<?= $t('prefs.title') ?>">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div id="settingsmenu" class="settingsmenu" hidden>
+      <fieldset class="themepick">
+        <legend><?= $t('prefs.theme') ?></legend>
+<?php foreach (Theme::CHOICES as $choice): ?>
+        <label><input type="radio" name="theme" value="<?= $h($choice) ?>"<?= $choice === $theme ? ' checked' : '' ?>> <?= $t('prefs.theme_' . $choice) ?></label>
 <?php endforeach; ?>
-  </select>
+      </fieldset>
+      <label class="langpick"><span><?= $t('header.language') ?></span>
+        <select id="lang" class="lang">
+<?php foreach (I18n::LANGUAGES as $code => $name): ?>
+          <option value="<?= $h($code) ?>"<?= $code === $lang ? ' selected' : '' ?>><?= $h($name) ?></option>
+<?php endforeach; ?>
+        </select>
+      </label>
+    </div>
+  </div>
 </header>
 <div class="layout">
   <nav id="files" class="files" aria-label="<?= $t('nav.files') ?>"></nav>
